@@ -31,6 +31,17 @@
   .err { color: var(--coral); font-size: 14px; min-height: 0; }
   form { display: grid; gap: 10px; }
   [hidden] { display: none !important; }
+  .party { text-align: center; display: grid; gap: 12px; justify-items: center; }
+  .party .mascot { width: 190px; height: 228px; object-fit: cover; border-radius: 14px; filter: drop-shadow(0 14px 40px rgba(239,107,102,.35)); animation: pop .7s cubic-bezier(.2,1.4,.4,1) both, flex 2.4s ease-in-out .8s infinite; transform-origin: 60% 80%; }
+  .party .badge { display: inline-flex; gap: 8px; align-items: center; padding: 6px 12px 6px 6px; border-radius: 99px; background: rgba(79,191,138,.12); border: 1px solid rgba(79,191,138,.35); color: #9ef0bf; font-size: 13px; font-weight: 600; }
+  .party .badge i { width: 22px; height: 22px; border-radius: 50%; background: var(--green); color: #111; display: grid; place-items: center; font-style: normal; font-weight: 800; }
+  .party h1.big { font-size: 34px; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; }
+  .party h1.big span { background: linear-gradient(90deg, #ef6b66, #f78abc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .card:has(#done:not([hidden])) .brand { justify-self: center; }
+  canvas#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+  @keyframes pop { from { opacity: 0; transform: translateY(24px) scale(.9) rotate(-3deg); } to { opacity: 1; transform: none; } }
+  @keyframes flex { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04) rotate(-.6deg); } }
+  @media (prefers-reduced-motion: reduce) { .party .mascot { animation: none; } }
 </style>
 </head>
 <body>
@@ -65,7 +76,13 @@
       <button class="ghost" id="deny" type="button">Don't allow</button>
       <div class="dim">You can disconnect it any time in the 90TEN app.</div>
     </div>
-    <div id="done" hidden><h1>Connected</h1><p class="muted">Taking you back to your agent…</p></div>
+    <div id="done" hidden class="party">
+      <img class="mascot" src="https://the-ai-surfer.github.io/90ten-web/mascot.jpg" alt="The 90TEN strongman, flexing">
+      <div class="badge"><i>✓</i><span id="doneWho">Your agent is connected</span></div>
+      <h1 class="big">Connected.<br><span>Now we lift.</span></h1>
+      <p class="muted">Your agent can now use your 90TEN: your playbooks, your apps through the fence, and receipts for everything. Taking you back…</p>
+      <a id="back" class="link" href="#">Go back now</a>
+    </div>
   </div>
 </main>
 <script>
@@ -89,13 +106,27 @@
   // the session goes straight to the connector and is never kept in this browser
   const finish = async (s) => {
     const d = await post(`${FN}/authorize/complete`, { req, access_token: s.access_token, refresh_token: s.refresh_token });
-    show("done"); location.replace(d.redirect);
+    // a moment to celebrate, then back to the agent (its own page only says "complete")
+    $("doneWho").textContent = `${(window.__who || "Your agent")} is connected`;
+    $("back").onclick = (e) => { e.preventDefault(); location.replace(d.redirect); };
+    show("done"); confetti();
+    setTimeout(() => location.replace(d.redirect), 3200);
   };
+  function confetti() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = document.createElement("canvas"); c.id = "confetti"; document.body.appendChild(c);
+    const x = c.getContext("2d"), dpr = devicePixelRatio || 1; c.width = innerWidth * dpr; c.height = innerHeight * dpr;
+    const cols = ["#EF6B66", "#F78ABC", "#ffffff", "#F4A4E7", "#ffd166"]; const ps = [];
+    for (let k = 0; k < 160; k++) ps.push({ x: c.width / 2, y: c.height * .35, vx: (Math.random() - .5) * 18 * dpr, vy: (-Math.random() * 15 - 5) * dpr, s: (Math.random() * 7 + 5) * dpr, r: Math.random() * 6, vr: (Math.random() - .5) * .3, c: cols[k % 5], l: 0 });
+    (function f() { x.clearRect(0, 0, c.width, c.height); let live = 0;
+      for (const p of ps) { if (p.l++ > 260) continue; live++; p.vy += .38 * dpr; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); x.restore(); }
+      if (live) requestAnimationFrame(f); else c.remove(); })();
+  }
   if (!/^[0-9a-f-]{36}$/.test(req)) { $("badWhy").textContent = "Go back to your agent and connect 90TEN again."; show("bad"); return; }
   fetch(`${FN}/authorize/info?req=${req}`).then(async (r) => {
     const d = await r.json().catch(() => ({}));
     if (!r.ok) { $("badWhy").textContent = d.error || "Go back to your agent and connect 90TEN again."; show("bad"); return; }
-    $("who").textContent = d.client_name; $("host").textContent = d.redirect_host;
+    $("who").textContent = d.client_name; window.__who = d.client_name; $("host").textContent = d.redirect_host;
     // an unverified name is only what the agent calls itself: show where its description lives too
     if (!d.verified_name && d.client_host) { $("clientHost").textContent = d.client_host; $("whoHost").hidden = false; }
     $("loopWarn").hidden = !d.loopback; $("nameWarn").hidden = !!d.verified_name || d.loopback;
