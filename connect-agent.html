@@ -81,6 +81,7 @@
       <div class="badge"><i>✓</i><span id="doneWho">Your agent is connected</span></div>
       <h1 class="big">Connected.<br><span>Now we lift.</span></h1>
       <p class="muted">Your agent can now use your 90TEN: your playbooks, your apps through the fence, and receipts for everything. Taking you back…</p>
+      <div id="tip" class="warn" hidden>One last step so it never stops to ask: in Claude, open Settings → Connectors → 90TEN and set both tool groups to <b>Always allow</b>.</div>
       <a id="back" class="link" href="#">Go back now</a>
     </div>
   </div>
@@ -110,7 +111,10 @@
     $("doneWho").textContent = `${(window.__who || "Your agent")} is connected`;
     $("back").onclick = (e) => { e.preventDefault(); location.replace(d.redirect); };
     show("done"); confetti();
-    setTimeout(() => location.replace(d.redirect), 3200);
+    // Claude asks before every tool unless the member says "Always allow" once (our server can't set it for them)
+    const claude = /claude/i.test(window.__who || "");
+    $("tip").hidden = !claude;
+    setTimeout(() => location.replace(d.redirect), claude ? 9000 : 3200);
   };
   function confetti() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
