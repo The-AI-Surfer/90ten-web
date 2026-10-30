@@ -69,9 +69,35 @@ canvas#c{position:fixed;inset:0;pointer-events:none;z-index:5}
 <script>
 (function(){
   var q; try{q=new URLSearchParams(location.search)}catch(e){q=null}
-  var ok=!q||!q.get("status")||q.get("status")==="success";
+  var st=q&&q.get("status"),os=q&&q.get("toolkit")==="os";
+  var ok=!st||st==="success",openApp=st==="open_app",notNow=st==="failed"&&q.get("reason")==="not_now";
   var quips=["Your 90 just got lighter.","One less tab to babysit.","Proof, not promises.","Hours back incoming.","Protect your 10."];
-  if(!ok){
+  // your OS: its agents, not an app's tools
+  if(ok&&os)document.getElementById("lead").textContent="90TEN can now ask the agents you turn on to do steps in your jobs, one at a time. It never sees their public conversations, and nothing goes out without your yes.";
+  // started from the OS: one more tap, in 90TEN
+  if(openApp){
+    document.getElementById("tick").textContent="→";
+    document.getElementById("bt").textContent="One more tap";
+    document.getElementById("h").innerHTML="Almost there.<br><span>Finish in 90TEN.</span>";
+    document.getElementById("lead").textContent="Open 90TEN and tap Connect my OS. Your OS asks you to Allow once, and you're done.";
+    document.getElementById("quip").textContent="";
+    document.querySelector("#back div span").innerHTML="Open <b>90TEN</b> → Settings → Your AI → <b>Connect my OS</b>.";
+    document.getElementById("close").textContent="Got it";
+    document.querySelector("small.foot").textContent="You can close this tab. Nothing is connected yet.";
+    quips=[""];
+  }
+  if(!ok&&!openApp&&notNow){
+    document.getElementById("tick").textContent="·";
+    document.getElementById("bt").textContent="Not connected";
+    document.getElementById("h").innerHTML="No problem.<br><span>Nothing changed.</span>";
+    document.getElementById("lead").textContent="90TEN can't use your agents. Tap Connect my OS in 90TEN whenever you want to.";
+    document.getElementById("quip").textContent="";
+    document.querySelector("#back div span").innerHTML="Head back to <b>the 90TEN app</b>.";
+    document.getElementById("close").textContent="Back to work";
+    document.querySelector("small.foot").textContent="You can close this tab.";
+    quips=[""];
+  }
+  if(!ok&&!openApp&&!notNow){
     document.getElementById("m").classList.add("fail");
     document.getElementById("tick").textContent="!";
     document.getElementById("bt").textContent="Didn't connect";
